@@ -29,10 +29,10 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatPhone(phone: string): string {
-  if (phone.startsWith('+507') && phone.length === 12) {
-    return `+507 ${phone.slice(4, 8)}-${phone.slice(8)}`
-  }
-  return phone
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length <= 3) return phone
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
 }
 
 export function timeAgo(date: Date | string): string {

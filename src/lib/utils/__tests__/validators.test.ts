@@ -20,10 +20,10 @@ describe('clientFormSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects invalid Panama phone', () => {
+  it('rejects phone too short', () => {
     const result = clientFormSchema.safeParse({
       name: 'Juan',
-      phone: '+507123',
+      phone: '123',
     })
 
     expect(result.success).toBe(false)

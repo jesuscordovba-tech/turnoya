@@ -4,7 +4,8 @@ export const clientFormSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   phone: z
     .string()
-    .regex(/^\+507\d{8}$/, 'El teléfono debe ser +507XXXXXXXX'),
+    .min(7, 'Teléfono debe tener al menos 7 dígitos')
+    .regex(/^\+?\d{7,15}$/, 'Teléfono inválido'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
 })
@@ -19,7 +20,10 @@ export const serviceSchema = z.object({
 export const businessSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(200),
   description: z.string().max(2000).optional(),
-  phone: z.string().regex(/^\+507\d{8}$/, 'Teléfono debe ser +507XXXXXXXX'),
+  phone: z
+    .string()
+    .min(7, 'Teléfono debe tener al menos 7 dígitos')
+    .regex(/^\+?\d{7,15}$/, 'Teléfono inválido'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   address: z.string().max(500).optional(),
 })

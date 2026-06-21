@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils/cn'
-import { formatPanamaPhone } from '@/lib/utils/phone'
+import { formatDisplayPhone } from '@/lib/utils/phone'
 import type { InputHTMLAttributes } from 'react'
 
 interface PhoneInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
@@ -11,16 +11,13 @@ interface PhoneInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'o
 export function PhoneInput({ className, label, error, id, value, onChange, ...props }: PhoneInputProps) {
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/[^\d+]/g, '')
-    if (!raw.startsWith('+') && raw.length > 0) {
-      onChange?.('+')
-      return
-    }
+    const hasPlus = raw.startsWith('+')
     const digits = raw.replace(/\D/g, '').slice(0, 11)
-    const formatted = digits.length > 0 ? `+${digits}` : ''
+    const formatted = hasPlus ? `+${digits}` : digits
     onChange?.(formatted)
   }
 
-  const formatted = value ? formatPanamaPhone(value as string) : ''
+  const displayValue = value ? formatDisplayPhone(value as string) : ''
 
   return (
     <div className="space-y-1">
@@ -32,9 +29,9 @@ export function PhoneInput({ className, label, error, id, value, onChange, ...pr
       <input
         id={id}
         type="tel"
-        value={formatted}
+        value={displayValue}
         onChange={handleChange}
-        placeholder="+507 6000-0000"
+        placeholder="6000-0000"
         className={cn(
           'block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500',
           error && 'border-red-500',

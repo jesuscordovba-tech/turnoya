@@ -95,7 +95,7 @@ export function SettingsPage() {
           <Input
             id="phone"
             label="Teléfono"
-            placeholder="+507XXXXXXXX"
+            placeholder="60000000"
             error={errors.phone?.message}
             {...register('phone')}
           />
