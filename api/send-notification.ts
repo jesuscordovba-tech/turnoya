@@ -47,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `*Duración total:* ${totalDuration} min`,
     `*Fecha:* ${body.date}`,
     `*Hora:* ${body.time}`,
-    `*Total:* \$${totalPrice.toFixed(2)}`,
+    `*Total:* $${totalPrice.toFixed(2)}`,
     '',
     'Para confirmar, respondé: *CONFIRMAR*',
     'Para cancelar, respondé: *CANCELAR*',
