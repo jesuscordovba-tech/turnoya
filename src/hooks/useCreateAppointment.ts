@@ -40,7 +40,7 @@ export function useCreateAppointment() {
         throw clientError
       }
 
-      const { data: appointment, error: aptError } = await supabase
+      const { error: aptError } = await supabase
         .from('appointments')
         .insert({
           business_id: input.business_id,
@@ -53,12 +53,8 @@ export function useCreateAppointment() {
           client_email: input.client_email || null,
           notes: input.notes || null,
         })
-        .select()
-        .single()
 
       if (aptError) throw aptError
-
-      return appointment
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Error al crear la cita')

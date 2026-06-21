@@ -15,10 +15,13 @@ export function ClientForm({ onSubmit, loading }: ClientFormProps) {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientFormSchema),
   })
+
+  const phoneValue = watch('phone')
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -32,6 +35,7 @@ export function ClientForm({ onSubmit, loading }: ClientFormProps) {
       <PhoneInput
         id="phone"
         label="Teléfono (WhatsApp)"
+        value={phoneValue}
         error={errors.phone?.message}
         onChange={(value) => setValue('phone', value, { shouldValidate: true })}
       />
