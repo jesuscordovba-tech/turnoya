@@ -57,7 +57,11 @@ export function useCreateAppointment() {
       if (aptError) throw aptError
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Error al crear la cita')
+      const msg =
+        (error as { message?: string })?.message ||
+        (error as { error_description?: string })?.error_description ||
+        'Error al crear la cita'
+      toast.error(msg)
     },
   })
 }
