@@ -67,10 +67,13 @@ export function useCreateAppointment() {
       if (aptError) throw aptError
     },
     onError: (error) => {
-      const msg =
-        (error as { message?: string })?.message ||
-        (error as { error_description?: string })?.error_description ||
-        'Error al crear la cita'
+      const err = error as { code?: string; message?: string; error_description?: string }
+      let msg = err.message || err.error_description || 'Error al crear la cita'
+
+      if (err.code === '23P01' || msg.includes('no_overlap')) {
+        msg = 'El horario seleccionado no está disponible. Intentá con otro día u horario.'
+      }
+
       toast.error(msg)
     },
   })
