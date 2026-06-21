@@ -43,6 +43,7 @@ export function useCreateAppointment() {
       const { error: aptError } = await supabase
         .from('appointments')
         .insert({
+          status: 'pending',
           business_id: input.business_id,
           service_id: input.service_id,
           client_id: clientId,
