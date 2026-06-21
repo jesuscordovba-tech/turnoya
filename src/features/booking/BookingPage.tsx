@@ -260,12 +260,28 @@ export function BookingPage() {
           )}
 
           {step === 'confirm' && (
-            <BookingConfirmation
-              business={business}
-              services={selectedServices}
-              date={selectedDate}
-              time={selectedTime!}
-            />
+            <>
+              <BookingConfirmation
+                business={business}
+                services={selectedServices}
+                date={selectedDate}
+                time={selectedTime!}
+              />
+              <div className="mt-4">
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => {
+                    setSelectedServices([])
+                    setSelectedDate('')
+                    setSelectedTime(null)
+                    setStep('service')
+                  }}
+                >
+                  Hacer otra reserva
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </div>
