@@ -104,11 +104,6 @@ export function BookingPage() {
         service_id: selectedService.id,
         start_time: startLocal.toISOString(),
         end_time: endLocal.toISOString(),
-      {
-        business_id: business.id,
-        service_id: selectedService.id,
-        start_time: startTime,
-        end_time: endTime,
         client_name: data.name,
         client_phone: data.phone,
         client_email: data.email || undefined,
