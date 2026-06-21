@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { AppointmentStatusBadge } from './AppointmentStatusBadge'
 
 export function DashboardHome() {
   const { data: business, isLoading: loadingBusiness } = useMyBusiness()
@@ -88,24 +89,10 @@ export function DashboardHome() {
                   <p className="text-sm font-medium text-gray-900">{apt.client_name}</p>
                   <p className="text-xs text-gray-500">{apt.services?.name}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{formatTime(apt.start_time)}</p>
-                  <span
-                    className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                      apt.status === 'completed'
-                        ? 'bg-green-100 text-green-700'
-                        : apt.status === 'cancelled'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-blue-100 text-blue-700'
-                    }`}
-                  >
-                    {apt.status === 'completed'
-                      ? 'Completada'
-                      : apt.status === 'cancelled'
-                        ? 'Cancelada'
-                        : 'Confirmada'}
-                  </span>
-                </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">{formatTime(apt.start_time)}</p>
+                    <AppointmentStatusBadge status={apt.status} />
+                  </div>
               </div>
             ))}
           </div>
