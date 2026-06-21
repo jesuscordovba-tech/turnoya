@@ -122,22 +122,6 @@ export function BookingPage() {
       },
       {
         onSuccess: () => {
-          fetch('/api/send-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              businessPhone: business.phone,
-              clientName: data.name,
-              clientPhone: data.phone,
-              services: selectedServices.map((s) => ({
-                name: s.name,
-                duration: s.duration,
-                price: s.price,
-              })),
-              date: selectedDate,
-              time: selectedTime,
-            }),
-          }).catch(() => {})
           setStep('confirm')
         },
       },
