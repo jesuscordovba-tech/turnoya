@@ -1,15 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
 
-function getSupabase() {
+function supabaseFetch(path: string, options?: RequestInit) {
   const url = process.env.VITE_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!url || !key) {
-    return null
-  }
+  if (!url || !key) return null
 
-  return createClient(url, key)
+  return fetch(`${url}${path}`, {
+    ...options,
+    headers: {
+      ...options?.headers,
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+  })
 }
 
 async function sendReply(to: string, text: string) {
@@ -34,9 +39,12 @@ async function sendReply(to: string, text: string) {
 }
 
 function normalizePhone(phone: string): string {
-  return phone
-    .replace(/^\+/, '')
-    .replace(/^(\d{7,8})$/, '507$1')
+  return phone.replace(/^\+/, '').replace(/^(\d{7,8})$/, '507$1')
+}
+
+const STATUS_MAP: Record<string, string> = {
+  confirmar: 'confirmed',
+  cancelar: 'cancelled',
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -67,65 +75,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const text = msg.text.body.trim().toLowerCase()
     const from = msg.from as string
+    const newStatus = STATUS_MAP[text]
 
     console.log(`WhatsApp reply from ${from}: "${text}"`)
 
-    if (text !== 'confirmar' && text !== 'cancelar') continue
+    if (!newStatus) continue
 
-    const action = text === 'confirmar' ? 'confirmed' : 'cancelled'
+    const fromNormalized = normalizePhone(from)
 
-    const supabase = getSupabase()
+    const bizRes = await supabaseFetch(
+      `/rest/v1/businesses?select=id&or=(phone.eq.${fromNormalized},phone.eq.${from})`,
+    )
 
-    if (!supabase) {
-      console.error('Supabase not configured')
+    if (!bizRes) {
       await sendReply(from, '❌ Error de configuración del servidor.')
       continue
     }
 
-    const fromNormalized = normalizePhone(from)
-
-    const { data: business } = await supabase
-      .from('businesses')
-      .select('id')
-      .or(`phone.eq.${fromNormalized},phone.eq.${from}`)
-      .maybeSingle()
+    const businesses = await bizRes.json()
+    const business = businesses?.[0]
 
     if (!business) {
-      console.error(`No business found for phone ${from} / ${fromNormalized}`)
       await sendReply(from, '❌ No se encontró tu negocio. Verificá tu número en el dashboard.')
       continue
     }
 
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select('id, client_name, start_time')
-      .eq('business_id', business.id)
-      .eq('status', 'pending')
-      .gte('start_time', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(5)
+    const now = new Date().toISOString()
+    const apptRes = await supabaseFetch(
+      `/rest/v1/appointments?select=id,client_name&business_id=eq.${business.id}&status=eq.pending&start_time=gte.${now}&order=created_at.desc&limit=5`,
+    )
+
+    if (!apptRes) {
+      await sendReply(from, '❌ Error de configuración del servidor.')
+      continue
+    }
+
+    const appointments = await apptRes.json()
 
     if (!appointments?.length) {
       await sendReply(from, '✅ No hay reservas pendientes por confirmar.')
       continue
     }
 
-    const ids = appointments.map((a) => a.id)
+    const ids = appointments.map((a: { id: string }) => a.id)
+    const idList = ids.map((id: string) => `"${id}"`).join(',')
 
-    const { error } = await supabase
-      .from('appointments')
-      .update({ status: action === 'confirmed' ? 'confirmed' : 'cancelled' })
-      .in('id', ids)
+    const updRes = await supabaseFetch(
+      `/rest/v1/appointments?id=in.(${idList})`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+        headers: { Prefer: 'return=minimal' },
+      },
+    )
 
-    if (error) {
-      console.error('Error updating appointments:', error)
+    if (!updRes || !updRes.ok) {
       await sendReply(from, '❌ Error al actualizar las reservas.')
       continue
     }
 
-    const names = appointments.map((a) => a.client_name).join(', ')
+    const names = appointments.map((a: { client_name: string }) => a.client_name).join(', ')
     const replyMsg =
-      action === 'confirmed'
+      newStatus === 'confirmed'
         ? `✅ Reserva confirmada: ${names}`
         : `❌ Reserva cancelada: ${names}`
 
