@@ -11,8 +11,8 @@ import toast from 'react-hot-toast'
 
 export function AppointmentsPage() {
   const { data: business } = useMyBusiness()
-  const [dateFilter, setDateFilter] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const { data: appointments, isLoading } = useAppointments(business?.id, dateFilter)
+  const [dateFilter, setDateFilter] = useState('')
+  const { data: appointments, isLoading } = useAppointments(business?.id, dateFilter || undefined)
   const updateStatus = useUpdateAppointmentStatus()
 
   function handleStatusChange(appointmentId: string, status: string) {
@@ -33,23 +33,25 @@ export function AppointmentsPage() {
     )
   }
 
-  const today = format(new Date(), 'yyyy-MM-dd')
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Citas</h1>
-        <input
-          type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
-        />
+        <div className="flex items-center gap-2">
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+          >
+            <option value="">Todas</option>
+            <option value={format(new Date(), 'yyyy-MM-dd')}>Hoy</option>
+          </select>
+        </div>
       </div>
 
       {!appointments || appointments.length === 0 ? (
         <EmptyState
-          title={dateFilter === today ? 'No hay citas para hoy' : 'No hay citas en esta fecha'}
+          title="No hay citas"
           description="Las citas aparecerán aquí cuando los clientes reserven."
         />
       ) : (

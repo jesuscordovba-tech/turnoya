@@ -90,14 +90,20 @@ export function BookingPage() {
   async function handleClientSubmit(data: ClientFormData) {
     if (!business || !selectedService || !selectedDate || !selectedTime) return
 
-    const startTime = `${selectedDate}T${selectedTime}:00`
-    const [h, m] = selectedTime.split(':').map(Number)
-    const endMinutes = h * 60 + m + selectedService.duration
+    // Convert local time (Panama UTC-5) to UTC for storage
+    const startLocal = new Date(`${selectedDate}T${selectedTime}:00-05:00`)
+    const endMinutes = selectedTime.split(':').map(Number)[0] * 60 +
+      selectedTime.split(':').map(Number)[1] + selectedService.duration
     const endHour = Math.floor(endMinutes / 60)
     const endMin = endMinutes % 60
-    const endTime = `${selectedDate}T${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}:00`
+    const endLocal = new Date(`${selectedDate}T${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}:00-05:00`)
 
     createAppointment.mutate(
+      {
+        business_id: business.id,
+        service_id: selectedService.id,
+        start_time: startLocal.toISOString(),
+        end_time: endLocal.toISOString(),
       {
         business_id: business.id,
         service_id: selectedService.id,
