@@ -13,26 +13,39 @@ interface CreateAppointmentInput {
   notes?: string
 }
 
+async function phoneToUuid(phone: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(phone)
+  const hashBuffer = await crypto.subtle.digest('SHA-1', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return `${hashHex.slice(0, 8)}-${hashHex.slice(8, 12)}-${hashHex.slice(12, 16)}-${hashHex.slice(16, 20)}-${hashHex.slice(20, 32)}`
+}
+
 export function useCreateAppointment() {
   return useMutation({
     mutationFn: async (input: CreateAppointmentInput) => {
-      const { data: client, error: clientError } = await supabase
-        .from('clients')
-        .upsert(
-          { phone: input.client_phone, name: input.client_name, email: input.client_email || null },
-          { onConflict: 'phone' },
-        )
-        .select()
-        .single()
+      const clientId = await phoneToUuid(input.client_phone)
 
-      if (clientError) throw clientError
+      const { error: clientError } = await supabase
+        .from('clients')
+        .insert({
+          id: clientId,
+          phone: input.client_phone,
+          name: input.client_name,
+          email: input.client_email || null,
+        })
+
+      if (clientError && clientError.code !== '23505') {
+        throw clientError
+      }
 
       const { data: appointment, error: aptError } = await supabase
         .from('appointments')
         .insert({
           business_id: input.business_id,
           service_id: input.service_id,
-          client_id: client.id,
+          client_id: clientId,
           start_time: input.start_time,
           end_time: input.end_time,
           client_name: input.client_name,
