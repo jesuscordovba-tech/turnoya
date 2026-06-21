@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/Button'
 
 export function DashboardHome() {
   const { data: business, isLoading: loadingBusiness } = useMyBusiness()
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const { data: appointments, isLoading: loadingAppts } = useAppointments(business?.id, today)
+  const { data: appointments, isLoading: loadingAppts } = useAppointments(business?.id)
 
   if (loadingBusiness || loadingAppts) {
     return (
@@ -34,10 +33,14 @@ export function DashboardHome() {
     )
   }
 
-  const todayAppointments = appointments || []
-  const pending = todayAppointments.filter((a) => a.status === 'confirmed' || a.status === 'pending')
-  const completed = todayAppointments.filter((a) => a.status === 'completed')
-  const totalEarnings = completed.reduce((sum, a) => sum + Number(a.services?.price || 0), 0)
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const todayAppts = (appointments || []).filter((a) => a.start_time.startsWith(today))
+  const pending = todayAppts.filter((a) => a.status === 'confirmed' || a.status === 'pending')
+  const completedToday = todayAppts.filter((a) => a.status === 'completed')
+  const totalEarnings = completedToday.reduce((sum, a) => sum + Number(a.services?.price || 0), 0)
+  const upcoming = (appointments || [])
+    .filter((a) => a.status === 'confirmed' || a.status === 'pending')
+    .slice(0, 5)
 
   return (
     <div className="space-y-6">
@@ -51,7 +54,7 @@ export function DashboardHome() {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-200">
           <p className="text-sm text-gray-500">Citas hoy</p>
-          <p className="text-2xl font-bold text-gray-900">{todayAppointments.length}</p>
+          <p className="text-2xl font-bold text-gray-900">{todayAppts.length}</p>
         </div>
         <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-200">
           <p className="text-sm text-gray-500">Pendientes</p>
@@ -65,7 +68,7 @@ export function DashboardHome() {
 
       <div className="rounded-xl bg-white shadow-sm border border-gray-200">
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="font-semibold text-gray-900">Citas de hoy</h2>
+          <h2 className="font-semibold text-gray-900">Próximas citas</h2>
           <Link
             to="/dashboard/appointments"
             className="text-sm font-medium text-primary-600 hover:text-primary-700"
@@ -73,13 +76,13 @@ export function DashboardHome() {
             Ver todas
           </Link>
         </div>
-        {todayAppointments.length === 0 ? (
+        {upcoming.length === 0 ? (
           <div className="px-6 py-8 text-center text-sm text-gray-500">
-            No hay citas para hoy
+            No hay citas pendientes
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {todayAppointments.slice(0, 5).map((apt) => (
+            {upcoming.map((apt) => (
               <div key={apt.id} className="flex items-center justify-between px-6 py-3">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{apt.client_name}</p>
