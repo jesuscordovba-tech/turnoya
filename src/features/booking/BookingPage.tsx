@@ -4,6 +4,7 @@ import { useBusiness } from '@/hooks/useBusiness'
 import { useServices } from '@/hooks/useServices'
 import { useBusinessHours } from '@/hooks/useBusinessHours'
 import { useCreateAppointment } from '@/hooks/useCreateAppointment'
+import { useBusySlots } from '@/hooks/useBusySlots'
 import { generateTimeSlots, type TimeSlot } from '@/lib/utils/time'
 import { formatCurrency } from '@/lib/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
@@ -32,6 +33,8 @@ export function BookingPage() {
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
 
+  const { data: busySlots } = useBusySlots(business?.id, selectedDate || undefined)
+
   const totalDuration = useMemo(() => {
     return selectedServices.reduce((sum, s) => sum + s.duration, 0)
   }, [selectedServices])
@@ -51,11 +54,11 @@ export function BookingPage() {
       closeTime: dayHours.close_time,
       serviceDuration: totalDuration,
       slotInterval: business?.slot_interval || 30,
-      existingAppointments: [],
+      existingAppointments: busySlots || [],
       paddingBefore: business?.padding_before || 0,
       paddingAfter: business?.padding_after || 0,
     })
-  }, [businessHours, selectedServices, selectedDate, business, totalDuration])
+  }, [businessHours, selectedServices, selectedDate, business, totalDuration, busySlots])
 
   const closedDays = useMemo(() => {
     if (!businessHours) return []
