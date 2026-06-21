@@ -36,12 +36,10 @@ export function DashboardHome() {
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const todayAppts = (appointments || []).filter((a) => a.start_time.startsWith(today))
-  const pending = todayAppts.filter((a) => a.status === 'confirmed' || a.status === 'pending')
+  const pending = (appointments || []).filter((a) => a.status === 'confirmed' || a.status === 'pending')
   const completedToday = todayAppts.filter((a) => a.status === 'completed')
   const totalEarnings = completedToday.reduce((sum, a) => sum + Number(a.services?.price || 0), 0)
-  const upcoming = (appointments || [])
-    .filter((a) => a.status === 'confirmed' || a.status === 'pending')
-    .slice(0, 5)
+  const upcoming = pending.slice(0, 5)
 
   return (
     <div className="space-y-6">
