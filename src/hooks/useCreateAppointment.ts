@@ -1,12 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
+import type { Service } from '@/types/service'
 
 interface CreateAppointmentInput {
   business_id: string
-  service_id: string
+  services: Pick<Service, 'id' | 'duration'>[]
   start_time: string
-  end_time: string
   client_name: string
   client_phone: string
   client_email?: string
@@ -40,20 +40,29 @@ export function useCreateAppointment() {
         throw clientError
       }
 
-      const { error: aptError } = await supabase
-        .from('appointments')
-        .insert({
+      let currentStart = new Date(input.start_time)
+
+      const appointments = input.services.map((service) => {
+        const end = new Date(currentStart.getTime() + service.duration * 60000)
+        const apt = {
           status: 'pending',
           business_id: input.business_id,
-          service_id: input.service_id,
+          service_id: service.id,
           client_id: clientId,
-          start_time: input.start_time,
-          end_time: input.end_time,
+          start_time: currentStart.toISOString(),
+          end_time: end.toISOString(),
           client_name: input.client_name,
           client_phone: input.client_phone,
           client_email: input.client_email || null,
           notes: input.notes || null,
-        })
+        }
+        currentStart = end
+        return apt
+      })
+
+      const { error: aptError } = await supabase
+        .from('appointments')
+        .insert(appointments)
 
       if (aptError) throw aptError
     },

@@ -6,13 +6,15 @@ import type { Service } from '@/types/service'
 
 interface BookingConfirmationProps {
   business: Business
-  service: Service
+  services: Service[]
   date: string
   time: string
 }
 
-export function BookingConfirmation({ business, service, date, time }: BookingConfirmationProps) {
+export function BookingConfirmation({ business, services, date, time }: BookingConfirmationProps) {
   const dateObj = parseISO(date)
+  const totalDuration = services.reduce((sum, s) => sum + s.duration, 0)
+  const totalPrice = services.reduce((sum, s) => sum + Number(s.price), 0)
 
   return (
     <div className="space-y-6 text-center">
@@ -36,10 +38,6 @@ export function BookingConfirmation({ business, service, date, time }: BookingCo
             <span className="font-medium text-gray-900">{business.name}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Servicio</span>
-            <span className="font-medium text-gray-900">{service.name}</span>
-          </div>
-          <div className="flex justify-between text-sm">
             <span className="text-gray-500">Fecha</span>
             <span className="font-medium text-gray-900">
               {format(dateObj, "EEEE d 'de' MMMM", { locale: es })}
@@ -49,13 +47,22 @@ export function BookingConfirmation({ business, service, date, time }: BookingCo
             <span className="text-gray-500">Hora</span>
             <span className="font-medium text-gray-900">{time}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Duración</span>
-            <span className="font-medium text-gray-900">{service.duration} min</span>
+          <div className="border-t border-gray-200 pt-2">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Servicios</p>
+            {services.map((s) => (
+              <div key={s.id} className="flex justify-between py-1 text-sm">
+                <span className="text-gray-700">{s.name}</span>
+                <span className="text-gray-500">{s.duration} min</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between border-t border-gray-200 pt-2 text-sm">
+            <span className="font-medium text-gray-700">Duración total</span>
+            <span className="text-gray-900">{totalDuration} min</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Precio</span>
-            <span className="font-bold text-primary-600">{formatCurrency(service.price)}</span>
+            <span className="font-medium text-gray-700">Total</span>
+            <span className="font-bold text-primary-600">{formatCurrency(totalPrice)}</span>
           </div>
         </div>
       </div>

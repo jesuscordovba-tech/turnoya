@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useBusiness } from '@/hooks/useBusiness'
 import { useServices } from '@/hooks/useServices'
 import { useBusinessHours } from '@/hooks/useBusinessHours'
 import { useCreateAppointment } from '@/hooks/useCreateAppointment'
 import { generateTimeSlots, type TimeSlot } from '@/lib/utils/time'
+import { formatCurrency } from '@/lib/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { ServiceCard } from './ServiceCard'
 import { DateCalendar } from './DateCalendar'
@@ -15,7 +16,7 @@ import { BookingConfirmation } from './BookingConfirmation'
 import type { Service } from '@/types/service'
 import type { ClientFormData } from '@/lib/utils/validators'
 import { parseISO } from 'date-fns'
-import { useMemo } from 'react'
+import { Button } from '@/components/ui/Button'
 
 type Step = 'service' | 'datetime' | 'client' | 'confirm'
 
@@ -27,12 +28,20 @@ export function BookingPage() {
   const createAppointment = useCreateAppointment()
 
   const [step, setStep] = useState<Step>('service')
-  const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const [selectedServices, setSelectedServices] = useState<Service[]>([])
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
 
+  const totalDuration = useMemo(() => {
+    return selectedServices.reduce((sum, s) => sum + s.duration, 0)
+  }, [selectedServices])
+
+  const totalPrice = useMemo(() => {
+    return selectedServices.reduce((sum, s) => sum + Number(s.price), 0)
+  }, [selectedServices])
+
   const slots: TimeSlot[] = useMemo(() => {
-    if (!businessHours || !selectedService || !selectedDate) return []
+    if (!businessHours || !selectedServices.length || !selectedDate) return []
     const dayOfWeek = parseISO(selectedDate).getDay()
     const dayHours = businessHours.find((h) => h.day_of_week === dayOfWeek)
     if (!dayHours || dayHours.is_closed) return []
@@ -40,13 +49,13 @@ export function BookingPage() {
     return generateTimeSlots({
       openTime: dayHours.open_time,
       closeTime: dayHours.close_time,
-      serviceDuration: selectedService.duration,
+      serviceDuration: totalDuration,
       slotInterval: business?.slot_interval || 30,
       existingAppointments: [],
       paddingBefore: business?.padding_before || 0,
       paddingAfter: business?.padding_after || 0,
     })
-  }, [businessHours, selectedService, selectedDate, business])
+  }, [businessHours, selectedServices, selectedDate, business, totalDuration])
 
   const closedDays = useMemo(() => {
     if (!businessHours) return []
@@ -72,9 +81,15 @@ export function BookingPage() {
     )
   }
 
-  function handleServiceSelect(service: Service) {
-    setSelectedService(service)
-    setStep('datetime')
+  function handleServiceToggle(service: Service) {
+    setSelectedServices((prev) => {
+      const exists = prev.find((s) => s.id === service.id)
+      if (exists) {
+        return prev.filter((s) => s.id !== service.id)
+      }
+      return [...prev, service]
+    })
+    setSelectedTime(null)
   }
 
   function handleDateSelect(date: string) {
@@ -88,22 +103,15 @@ export function BookingPage() {
   }
 
   async function handleClientSubmit(data: ClientFormData) {
-    if (!business || !selectedService || !selectedDate || !selectedTime) return
+    if (!business || !selectedServices.length || !selectedDate || !selectedTime) return
 
-    // Convert local time (Panama UTC-5) to UTC for storage
     const startLocal = new Date(`${selectedDate}T${selectedTime}:00-05:00`)
-    const endMinutes = selectedTime.split(':').map(Number)[0] * 60 +
-      selectedTime.split(':').map(Number)[1] + selectedService.duration
-    const endHour = Math.floor(endMinutes / 60)
-    const endMin = endMinutes % 60
-    const endLocal = new Date(`${selectedDate}T${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}:00-05:00`)
 
     createAppointment.mutate(
       {
         business_id: business.id,
-        service_id: selectedService.id,
+        services: selectedServices.map((s) => ({ id: s.id, duration: s.duration })),
         start_time: startLocal.toISOString(),
-        end_time: endLocal.toISOString(),
         client_name: data.name,
         client_phone: data.phone,
         client_email: data.email || undefined,
@@ -117,6 +125,11 @@ export function BookingPage() {
     )
   }
 
+  function goToDatetimeStep() {
+    setSelectedTime(null)
+    setStep('datetime')
+  }
+
   const progress = ['service', 'datetime', 'client', 'confirm']
   const currentStepIndex = progress.indexOf(step)
 
@@ -125,7 +138,6 @@ export function BookingPage() {
       <div className="mx-auto max-w-2xl px-4 py-8">
         <BusinessHeader business={business} />
 
-        {/* Progress bar */}
         <div className="mb-8 flex items-center justify-center gap-2">
           {progress.map((s, i) => (
             <div key={s} className="flex items-center">
@@ -152,7 +164,7 @@ export function BookingPage() {
         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
           {step === 'service' && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">Elige un servicio</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Elige uno o más servicios</h2>
               {loadingServices ? (
                 <div className="flex justify-center py-8">
                   <Spinner />
@@ -162,21 +174,42 @@ export function BookingPage() {
                   No hay servicios disponibles en este momento
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {services.map((service) => (
-                    <ServiceCard
-                      key={service.id}
-                      service={service}
-                      selected={selectedService?.id === service.id}
-                      onSelect={() => handleServiceSelect(service)}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="space-y-3">
+                    {services.map((service) => (
+                      <ServiceCard
+                        key={service.id}
+                        service={service}
+                        selected={selectedServices.some((s) => s.id === service.id)}
+                        onSelect={() => handleServiceToggle(service)}
+                      />
+                    ))}
+                  </div>
+                  {selectedServices.length > 0 && (
+                    <div className="rounded-lg bg-gray-50 p-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">
+                          {selectedServices.length} servicio{selectedServices.length !== 1 ? 's' : ''}
+                        </span>
+                        <span className="font-medium text-gray-700">
+                          {totalDuration} min &middot; {formatCurrency(totalPrice)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <Button
+                    onClick={goToDatetimeStep}
+                    disabled={selectedServices.length === 0}
+                    className="w-full"
+                  >
+                    Continuar
+                  </Button>
+                </>
               )}
             </div>
           )}
 
-          {step === 'datetime' && selectedService && (
+          {step === 'datetime' && selectedServices.length > 0 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Fecha</h2>
@@ -193,14 +226,20 @@ export function BookingPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">Horario</h2>
                   <p className="text-sm text-gray-500">
-                    Duración: {selectedService.duration} min
+                    Duración total: {totalDuration} min
                   </p>
                   <div className="mt-3">
-                    <TimeSlotGrid
-                      slots={slots}
-                      selectedTime={selectedTime}
-                      onSelect={handleTimeSelect}
-                    />
+                    {slots.length === 0 ? (
+                      <p className="text-sm text-amber-600">
+                        La duración total de los servicios seleccionados ({totalDuration} min) excede el horario disponible. Seleccioná menos servicios o intentá con otro día.
+                      </p>
+                    ) : (
+                      <TimeSlotGrid
+                        slots={slots}
+                        selectedTime={selectedTime}
+                        onSelect={handleTimeSelect}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -223,7 +262,7 @@ export function BookingPage() {
           {step === 'confirm' && (
             <BookingConfirmation
               business={business}
-              service={selectedService!}
+              services={selectedServices}
               date={selectedDate}
               time={selectedTime!}
             />
